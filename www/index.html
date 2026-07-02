@@ -178,6 +178,9 @@
   .status-opt.selected.pago{background:rgba(52,211,153,0.15); color:var(--pago); border-color:var(--pago);}
   .status-opt.selected.pendente{background:rgba(251,191,36,0.15); color:var(--pend); border-color:var(--pend);}
   .status-opt.selected.atrasado{background:rgba(248,113,113,0.15); color:var(--atraso); border-color:var(--atraso);}
+  .status-opt.selected.agendado{background:rgba(59,130,246,0.15); color:var(--son); border-color:var(--son);}
+  .status-opt.selected.concluido{background:rgba(52,211,153,0.15); color:var(--pago); border-color:var(--pago);}
+  .status-opt.selected.naorealizado{background:rgba(248,113,113,0.15); color:var(--atraso); border-color:var(--atraso);}
 
   .save-btn{
     width:100%; margin-top:20px; padding:15px; border-radius:14px; border:none;
@@ -371,6 +374,13 @@
 
     <div class="mic-hint" id="micHint"></div>
 
+    <label>Status</label>
+    <div class="status-row" id="agendaStatusSelect">
+      <div class="status-opt agendado" data-status="Agendado" onclick="setAgendaStatus('Agendado')">Agendado</div>
+      <div class="status-opt concluido" data-status="Concluído" onclick="setAgendaStatus('Concluído')">Concluído</div>
+      <div class="status-opt naorealizado" data-status="Não realizado" onclick="setAgendaStatus('Não realizado')">Não realizado</div>
+    </div>
+
     <button class="save-btn" onclick="saveAgendamento()">Salvar agendamento</button>
     <button class="cancel-btn" onclick="closeAgendaSheet()">Cancelar</button>
   </div>
@@ -414,7 +424,7 @@
     <h2>Meus equipamentos</h2>
     <div id="equipManageList"></div>
 
-    <label>Novo equipamento</label>
+    <label id="eqFormLabel">Novo equipamento</label>
     <select id="eqTipo">
       <option value="Drone">🛰️ Drone</option>
       <option value="Sonorização">🔊 Equip. Sonorização</option>
@@ -431,7 +441,7 @@
     <label for="eqUltima">Última manutenção/revisão</label>
     <input type="date" id="eqUltima">
 
-    <button class="save-btn" onclick="saveEquipamento()">Adicionar equipamento</button>
+    <button class="save-btn" id="eqSaveBtn" onclick="saveEquipamento()">Adicionar equipamento</button>
     <button class="cancel-btn" onclick="closeEquipSheet()">Fechar</button>
   </div>
 </div>
@@ -453,11 +463,13 @@ let currentTipo = "Entrada";
 let currentArea = null;
 let currentStatus = "Pago";
 let agendaArea = null;
+let agendaStatus = "Agendado";
 let confirmFez = null;
 let confirmStatus = "Pago";
 let activeAgendaId = null;
 let editingEntryId = null;
 let editingAgendaId = null;
+let editingEquipId = null;
 
 const fmt = v => "R$ " + Number(v||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
 
@@ -651,6 +663,7 @@ function openAgendaSheet(ag){
     el.classList.toggle('selected', !!agendaArea && el.dataset.area === agendaArea);
   });
   document.getElementById('hectaresField').style.display = (agendaArea === 'Drone Pulverização') ? 'block' : 'none';
+  setAgendaStatus(ag ? ag.status : 'Agendado');
 }
 function closeAgendaSheet(){
   document.getElementById('agendaOverlay').classList.remove('open');
@@ -662,6 +675,12 @@ function setAgendaArea(a){
     el.classList.toggle('selected', el.dataset.area === a);
   });
   document.getElementById('hectaresField').style.display = (a === 'Drone Pulverização') ? 'block' : 'none';
+}
+function setAgendaStatus(s){
+  agendaStatus = s;
+  document.querySelectorAll('#agendaStatusSelect .status-opt').forEach(el=>{
+    el.classList.toggle('selected', el.dataset.status === s);
+  });
 }
 async function saveAgendamento(){
   const cliente = document.getElementById('agCliente').value.trim();
@@ -676,11 +695,11 @@ async function saveAgendamento(){
 
   if(editingAgendaId){
     const idx = agendamentos.findIndex(a => a.id === editingAgendaId);
-    if(idx !== -1) agendamentos[idx] = {...agendamentos[idx], area: agendaArea, cliente, descricao, data, hora, hectares};
+    if(idx !== -1) agendamentos[idx] = {...agendamentos[idx], area: agendaArea, cliente, descricao, data, hora, hectares, status: agendaStatus};
   }else{
     agendamentos.push({
       id: crypto.randomUUID(), area: agendaArea, cliente, descricao,
-      data, hora, status: "Agendado", hectares
+      data, hora, status: agendaStatus, hectares
     });
   }
   await persistAgenda();
@@ -758,15 +777,40 @@ async function saveConfirmacao(){
   setStatusMsg("Registrado! Lançamento atualizado.");
 }
 
+async function deleteAgendamento(id){
+  agendamentos = agendamentos.filter(a => a.id !== id);
+  await persistAgenda();
+  render();
+}
+
 function openEquipSheet(){
   document.getElementById('equipOverlay').classList.add('open');
-  document.getElementById('eqNome').value = '';
-  document.getElementById('eqIntervalo').value = '30';
-  document.getElementById('eqUltima').value = new Date().toISOString().slice(0,10);
+  resetEquipForm();
   renderEquipManageList();
 }
 function closeEquipSheet(){
   document.getElementById('equipOverlay').classList.remove('open');
+  editingEquipId = null;
+}
+function resetEquipForm(){
+  editingEquipId = null;
+  document.getElementById('eqFormLabel').textContent = 'Novo equipamento';
+  document.getElementById('eqSaveBtn').textContent = 'Adicionar equipamento';
+  document.getElementById('eqTipo').value = 'Drone';
+  document.getElementById('eqNome').value = '';
+  document.getElementById('eqIntervalo').value = '30';
+  document.getElementById('eqUltima').value = new Date().toISOString().slice(0,10);
+}
+function editEquipamento(id){
+  const eq = equipamentos.find(e=>e.id===id);
+  if(!eq) return;
+  editingEquipId = eq.id;
+  document.getElementById('eqFormLabel').textContent = 'Editar equipamento';
+  document.getElementById('eqSaveBtn').textContent = 'Salvar alterações';
+  document.getElementById('eqTipo').value = eq.tipo;
+  document.getElementById('eqNome').value = eq.nome;
+  document.getElementById('eqIntervalo').value = eq.intervalo;
+  document.getElementById('eqUltima').value = eq.ultima;
 }
 async function saveEquipamento(){
   const tipo = document.getElementById('eqTipo').value;
@@ -774,9 +818,15 @@ async function saveEquipamento(){
   const intervalo = parseInt(document.getElementById('eqIntervalo').value) || 30;
   const ultima = document.getElementById('eqUltima').value || new Date().toISOString().slice(0,10);
   if(!nome){ setStatusMsg("Dê um nome ao equipamento."); return; }
-  equipamentos.push({id: crypto.randomUUID(), tipo, nome, intervalo, ultima});
+
+  if(editingEquipId){
+    const idx = equipamentos.findIndex(e=>e.id===editingEquipId);
+    if(idx !== -1) equipamentos[idx] = {...equipamentos[idx], tipo, nome, intervalo, ultima};
+  }else{
+    equipamentos.push({id: crypto.randomUUID(), tipo, nome, intervalo, ultima});
+  }
   await persistEquip();
-  document.getElementById('eqNome').value = '';
+  resetEquipForm();
   renderEquipManageList();
   render();
 }
@@ -820,6 +870,10 @@ function renderEquipManageList(){
       <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
         <span class="equip-status ${st.cls}">${st.label}</span>
         <button class="equip-btn" onclick="marcarManutencao('${eq.id}')">Revisei hoje</button>
+        <div class="item-actions" style="flex-direction:row;">
+          <button class="edit-btn" onclick="editEquipamento('${eq.id}')">✎</button>
+          <button class="del-btn" onclick="removerEquipamento('${eq.id}')">✕</button>
+        </div>
       </div>
     </div>`;
   }).join('');
@@ -1088,6 +1142,7 @@ function renderAgenda(){
       <div class="item-actions">
         <div class="agenda-status ${statusCls}">${ag.status}</div>
         <button class="edit-btn" onclick="event.stopPropagation(); openAgendaSheet(agendamentos.find(x=>x.id==='${ag.id}'))">✎</button>
+        <button class="del-btn" onclick="event.stopPropagation(); deleteAgendamento('${ag.id}')">✕</button>
       </div>
     </div>`;
   }).join('');
