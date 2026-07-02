@@ -5,16 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <title>Controle Financeiro — Anderson</title>
 
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+
 <!-- Instalação na tela inicial (iOS) -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Financeiro">
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%2314161a'/%3E%3Ctext x='90' y='80' font-family='Arial' font-size='60' fill='%2334d399' text-anchor='middle'%3ER%24%3C/text%3E%3Ctext x='90' y='128' font-family='Arial' font-size='24' font-weight='bold' fill='%23f2f3f5' text-anchor='middle'%3EANDERSON%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 
 <!-- Instalação na tela inicial (Android) -->
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#14161a">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%2314161a'/%3E%3Ctext x='90' y='80' font-family='Arial' font-size='60' fill='%2334d399' text-anchor='middle'%3ER%24%3C/text%3E%3Ctext x='90' y='128' font-family='Arial' font-size='24' font-weight='bold' fill='%23f2f3f5' text-anchor='middle'%3EANDERSON%3C/text%3E%3C/svg%3E">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <style>
   :root{
     --bg: #14161a;
@@ -1059,6 +1062,12 @@ function renderAgenda(){
 }
 
 loadEntries();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
 </script>
 </body>
 </html>
