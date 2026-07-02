@@ -182,6 +182,10 @@
   .status-opt.selected.concluido{background:rgba(52,211,153,0.15); color:var(--pago); border-color:var(--pago);}
   .status-opt.selected.naorealizado{background:rgba(248,113,113,0.15); color:var(--atraso); border-color:var(--atraso);}
 
+  .cfg-area-row{display:flex; gap:8px; margin-bottom:8px;}
+  .cfg-area-row .cfg-icon{width:56px; text-align:center; flex-shrink:0;}
+  .cfg-area-row .cfg-name{flex:1;}
+
   .save-btn{
     width:100%; margin-top:20px; padding:15px; border-radius:14px; border:none;
     background:var(--text); color:var(--bg); font-size:15px; font-weight:800; cursor:pointer;
@@ -231,13 +235,14 @@
 <div class="wrap">
   <header>
     <div class="eyebrow">Controle Financeiro</div>
-    <h1>Olá, Anderson 👋</h1>
-    <div class="subtitle">Sonorização · Drones · Manutenção Odonto</div>
+    <h1 id="greeting">Olá, Anderson 👋</h1>
+    <div class="subtitle" id="subtitle">Sonorização · Drones · Manutenção Odonto</div>
   </header>
 
   <button class="export-btn" onclick="exportToExcel()">📤 Exportar para planilha Excel</button>
   <button class="export-btn" onclick="openAgendaSheet()">📅 Agendar serviço</button>
   <button class="export-btn" onclick="openEquipSheet()">🛠️ Meus equipamentos</button>
+  <button class="export-btn" onclick="openConfigSheet()">⚙️ Personalizar app</button>
 
   <div class="balance-card">
     <div class="balance-label">Saldo geral</div>
@@ -277,12 +282,7 @@
     </div>
 
     <label>Área do negócio</label>
-    <div class="area-select" id="areaSelect">
-      <div class="area-opt son" data-area="Sonorização" onclick="setArea('Sonorização')">🔊 Sonorização</div>
-      <div class="area-opt map" data-area="Drone Mapeamento" onclick="setArea('Drone Mapeamento')">🛰️ Mapeamento</div>
-      <div class="area-opt pulv" data-area="Drone Pulverização" onclick="setArea('Drone Pulverização')">🌾 Pulverização</div>
-      <div class="area-opt odo" data-area="Manutenção Odonto" onclick="setArea('Manutenção Odonto')">🦷 Odonto</div>
-    </div>
+    <div class="area-select" id="areaSelect"></div>
 
     <label for="valor">Valor (R$)</label>
     <input type="number" id="valor" inputmode="decimal" placeholder="0,00" step="0.01">
@@ -342,12 +342,7 @@
     <h2 id="agendaSheetTitle">Agendar serviço</h2>
 
     <label>Área do negócio</label>
-    <div class="area-select" id="agendaAreaSelect">
-      <div class="area-opt son" data-area="Sonorização" onclick="setAgendaArea('Sonorização')">🔊 Sonorização</div>
-      <div class="area-opt map" data-area="Drone Mapeamento" onclick="setAgendaArea('Drone Mapeamento')">🛰️ Mapeamento</div>
-      <div class="area-opt pulv" data-area="Drone Pulverização" onclick="setAgendaArea('Drone Pulverização')">🌾 Pulverização</div>
-      <div class="area-opt odo" data-area="Manutenção Odonto" onclick="setAgendaArea('Manutenção Odonto')">🦷 Odonto</div>
-    </div>
+    <div class="area-select" id="agendaAreaSelect"></div>
 
     <label for="agCliente">Cliente / Local</label>
     <div class="input-mic-row">
@@ -446,16 +441,51 @@
   </div>
 </div>
 
+<div class="sheet-overlay" id="configOverlay" onclick="if(event.target===this)closeConfigSheet()">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2>Personalizar app</h2>
+
+    <label for="cfgUserName">Seu nome (aparece na saudação)</label>
+    <input type="text" id="cfgUserName" placeholder="Ex: Anderson">
+
+    <label for="cfgSubtitle">Subtítulo</label>
+    <input type="text" id="cfgSubtitle" placeholder="Ex: Sonorização · Drones · Manutenção Odonto">
+
+    <label>Áreas do negócio</label>
+    <div id="cfgAreasList"></div>
+
+    <button class="save-btn" onclick="saveConfig()">Salvar personalização</button>
+    <button class="cancel-btn" onclick="closeConfigSheet()">Cancelar</button>
+  </div>
+</div>
+
 <script>
-const AREAS = {
-  "Sonorização": {cls:"son", icon:"🔊"},
-  "Drone Mapeamento": {cls:"map", icon:"🛰️"},
-  "Drone Pulverização": {cls:"pulv", icon:"🌾"},
-  "Manutenção Odonto": {cls:"odo", icon:"🦷"},
+const AREA_KEYS = ["son", "map", "pulv", "odo"];
+const DEFAULT_CONFIG = {
+  userName: "Anderson",
+  subtitle: "Sonorização · Drones · Manutenção Odonto",
+  areas: {
+    son:  { name: "Sonorização",        icon: "🔊" },
+    map:  { name: "Drone Mapeamento",   icon: "🛰️" },
+    pulv: { name: "Drone Pulverização", icon: "🌾" },
+    odo:  { name: "Manutenção Odonto",  icon: "🦷" },
+  }
 };
+let appConfig = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+let AREAS = {};
+function rebuildAreas(){
+  AREAS = {};
+  AREA_KEYS.forEach(k=>{
+    AREAS[appConfig.areas[k].name] = { cls: k, icon: appConfig.areas[k].icon };
+  });
+}
+rebuildAreas();
+
 const STORAGE_KEY = "lancamentos";
 const AGENDA_KEY = "agendamentos";
 const EQUIP_KEY = "equipamentos";
+const CONFIG_KEY = "appConfig";
 let entries = [];
 let agendamentos = [];
 let equipamentos = [];
@@ -532,7 +562,112 @@ async function loadEntries(){
     equipamentos = seedEquip();
     await persistEquip();
   }
+  try{
+    const rawCfg = await storageGet(CONFIG_KEY);
+    appConfig = rawCfg ? JSON.parse(rawCfg) : JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+  }catch(e){
+    appConfig = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+  }
+  rebuildAreas();
+  renderAreaOptions();
+  applyBranding();
   render();
+}
+
+async function persistConfig(){
+  const ok = await storageSet(CONFIG_KEY, JSON.stringify(appConfig));
+  if(!ok) setStatusMsg("Não consegui salvar a personalização agora.");
+}
+
+function applyBranding(){
+  document.getElementById('greeting').textContent = `Olá, ${appConfig.userName} 👋`;
+  document.getElementById('subtitle').textContent = appConfig.subtitle;
+  document.title = `Controle Financeiro — ${appConfig.userName}`;
+}
+
+function renderAreaOptions(){
+  const buildOpt = (k, onSelect) => {
+    const a = appConfig.areas[k];
+    const div = document.createElement('div');
+    div.className = `area-opt ${k}`;
+    div.dataset.area = a.name;
+    div.textContent = `${a.icon} ${a.name}`;
+    div.addEventListener('click', () => onSelect(a.name));
+    return div;
+  };
+  const areaSelect = document.getElementById('areaSelect');
+  areaSelect.innerHTML = '';
+  AREA_KEYS.forEach(k => areaSelect.appendChild(buildOpt(k, setArea)));
+
+  const agendaAreaSelect = document.getElementById('agendaAreaSelect');
+  agendaAreaSelect.innerHTML = '';
+  AREA_KEYS.forEach(k => agendaAreaSelect.appendChild(buildOpt(k, setAgendaArea)));
+}
+
+function openConfigSheet(){
+  document.getElementById('configOverlay').classList.add('open');
+  document.getElementById('cfgUserName').value = appConfig.userName;
+  document.getElementById('cfgSubtitle').value = appConfig.subtitle;
+  const wrap = document.getElementById('cfgAreasList');
+  wrap.innerHTML = '';
+  AREA_KEYS.forEach(k=>{
+    const a = appConfig.areas[k];
+    const row = document.createElement('div');
+    row.className = 'cfg-area-row';
+
+    const iconInput = document.createElement('input');
+    iconInput.type = 'text';
+    iconInput.id = `cfgIcon_${k}`;
+    iconInput.className = 'cfg-icon';
+    iconInput.maxLength = 4;
+    iconInput.value = a.icon;
+
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.id = `cfgName_${k}`;
+    nameInput.className = 'cfg-name';
+    nameInput.value = a.name;
+
+    row.appendChild(iconInput);
+    row.appendChild(nameInput);
+    wrap.appendChild(row);
+  });
+}
+function closeConfigSheet(){
+  document.getElementById('configOverlay').classList.remove('open');
+}
+async function saveConfig(){
+  const newUserName = document.getElementById('cfgUserName').value.trim() || DEFAULT_CONFIG.userName;
+  const newSubtitle = document.getElementById('cfgSubtitle').value.trim() || DEFAULT_CONFIG.subtitle;
+  const newAreas = {};
+  const renameMap = {};
+  AREA_KEYS.forEach(k=>{
+    const nome = document.getElementById(`cfgName_${k}`).value.trim() || appConfig.areas[k].name;
+    const icon = document.getElementById(`cfgIcon_${k}`).value.trim() || appConfig.areas[k].icon;
+    const oldName = appConfig.areas[k].name;
+    if(oldName !== nome) renameMap[oldName] = nome;
+    newAreas[k] = { name: nome, icon };
+  });
+
+  appConfig = { userName: newUserName, subtitle: newSubtitle, areas: newAreas };
+  await persistConfig();
+
+  let migrated = false;
+  Object.entries(renameMap).forEach(([oldName, newName])=>{
+    entries.forEach(e=>{ if(e.area === oldName){ e.area = newName; migrated = true; } });
+    agendamentos.forEach(a=>{ if(a.area === oldName){ a.area = newName; migrated = true; } });
+  });
+  if(migrated){
+    await persist();
+    await persistAgenda();
+  }
+
+  rebuildAreas();
+  renderAreaOptions();
+  applyBranding();
+  render();
+  closeConfigSheet();
+  setStatusMsg("Personalização salva!");
 }
 
 function seedEquip(){
@@ -599,7 +734,7 @@ function togglePublico(){
 }
 function setArea(a){
   currentArea = a;
-  document.querySelectorAll('.area-opt').forEach(el=>{
+  document.querySelectorAll('#areaSelect .area-opt').forEach(el=>{
     el.classList.toggle('selected', el.dataset.area === a);
   });
 }
@@ -662,7 +797,7 @@ function openAgendaSheet(ag){
   document.querySelectorAll('#agendaAreaSelect .area-opt').forEach(el=>{
     el.classList.toggle('selected', !!agendaArea && el.dataset.area === agendaArea);
   });
-  document.getElementById('hectaresField').style.display = (agendaArea === 'Drone Pulverização') ? 'block' : 'none';
+  document.getElementById('hectaresField').style.display = (AREAS[agendaArea] && AREAS[agendaArea].cls === 'pulv') ? 'block' : 'none';
   setAgendaStatus(ag ? ag.status : 'Agendado');
 }
 function closeAgendaSheet(){
@@ -674,7 +809,7 @@ function setAgendaArea(a){
   document.querySelectorAll('#agendaAreaSelect .area-opt').forEach(el=>{
     el.classList.toggle('selected', el.dataset.area === a);
   });
-  document.getElementById('hectaresField').style.display = (a === 'Drone Pulverização') ? 'block' : 'none';
+  document.getElementById('hectaresField').style.display = (AREAS[a] && AREAS[a].cls === 'pulv') ? 'block' : 'none';
 }
 function setAgendaStatus(s){
   agendaStatus = s;
@@ -691,7 +826,7 @@ async function saveAgendamento(){
   if(!cliente){ setStatusMsg("Informe cliente/local."); return; }
   if(!data || !hora){ setStatusMsg("Informe data e horário."); return; }
 
-  const hectares = agendaArea === 'Drone Pulverização' ? (parseFloat(document.getElementById('agHectares').value) || null) : null;
+  const hectares = (AREAS[agendaArea] && AREAS[agendaArea].cls === 'pulv') ? (parseFloat(document.getElementById('agHectares').value) || null) : null;
 
   if(editingAgendaId){
     const idx = agendamentos.findIndex(a => a.id === editingAgendaId);
@@ -996,7 +1131,8 @@ function exportToExcel(){
     XLSX.utils.book_append_sheet(wb, sheet, area.slice(0,31));
   });
 
-  const filename = `Controle_Financeiro_Anderson_${new Date().toISOString().slice(0,10)}.xlsx`;
+  const safeName = appConfig.userName.replace(/[^\p{L}\p{N}]+/gu, '_');
+  const filename = `Controle_Financeiro_${safeName}_${new Date().toISOString().slice(0,10)}.xlsx`;
   XLSX.writeFile(wb, filename);
   setStatusMsg("Planilha exportada! Confira seus downloads.");
 }
