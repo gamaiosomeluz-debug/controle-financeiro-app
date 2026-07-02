@@ -125,6 +125,8 @@
   .entry-value.entrada{color:var(--entrada);}
   .entry-value.saida{color:var(--saida);}
   .del-btn{background:none; border:none; color:var(--muted); font-size:18px; padding:4px 6px; cursor:pointer; line-height:1;}
+  .edit-btn{background:none; border:none; color:var(--muted); font-size:16px; padding:4px 6px; cursor:pointer; line-height:1;}
+  .item-actions{display:flex; flex-direction:column; align-items:center; gap:2px;}
 
   .empty{padding:30px 16px; text-align:center; color:var(--muted); font-size:13px;}
 
@@ -264,7 +266,7 @@
 <div class="sheet-overlay" id="overlay" onclick="if(event.target===this)closeSheet()">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <h2>Novo lançamento</h2>
+    <h2 id="entrySheetTitle">Novo lançamento</h2>
 
     <div class="toggle-row">
       <button type="button" class="toggle-btn" id="btnEntrada" onclick="setTipo('Entrada')">↓ Entrada</button>
@@ -334,7 +336,7 @@
 <div class="sheet-overlay" id="agendaOverlay" onclick="if(event.target===this)closeAgendaSheet()">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <h2>Agendar serviço</h2>
+    <h2 id="agendaSheetTitle">Agendar serviço</h2>
 
     <label>Área do negócio</label>
     <div class="area-select" id="agendaAreaSelect">
@@ -454,6 +456,8 @@ let agendaArea = null;
 let confirmFez = null;
 let confirmStatus = "Pago";
 let activeAgendaId = null;
+let editingEntryId = null;
+let editingAgendaId = null;
 
 const fmt = v => "R$ " + Number(v||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
 
@@ -547,23 +551,28 @@ function setStatusMsg(msg){
   if(msg) setTimeout(()=>{ document.getElementById('statusMsg').textContent=''; }, 2500);
 }
 
-function openSheet(){
+function openSheet(entry){
   document.getElementById('overlay').classList.add('open');
-  document.getElementById('data').value = new Date().toISOString().slice(0,10);
-  setTipo('Entrada');
-  currentArea = null;
-  document.querySelectorAll('.area-opt').forEach(el=>el.classList.remove('selected'));
-  setStatus('Pago');
-  document.getElementById('valor').value = '';
-  document.getElementById('cliente').value = '';
-  document.getElementById('categoria').value = '';
-  document.getElementById('isPublico').checked = false;
-  document.getElementById('publicoDetails').style.display = 'none';
-  document.getElementById('numProcesso').value = '';
-  document.getElementById('previsaoPag').value = '';
+  editingEntryId = entry ? entry.id : null;
+  document.getElementById('entrySheetTitle').textContent = entry ? 'Editar lançamento' : 'Novo lançamento';
+  document.getElementById('data').value = entry ? entry.data : new Date().toISOString().slice(0,10);
+  setTipo(entry ? entry.tipo : 'Entrada');
+  currentArea = entry ? entry.area : null;
+  document.querySelectorAll('#areaSelect .area-opt').forEach(el=>{
+    el.classList.toggle('selected', !!entry && el.dataset.area === entry.area);
+  });
+  setStatus(entry ? entry.status : 'Pago');
+  document.getElementById('valor').value = entry ? entry.valor : '';
+  document.getElementById('cliente').value = entry ? entry.cliente : '';
+  document.getElementById('categoria').value = entry ? (entry.categoria || '') : '';
+  document.getElementById('isPublico').checked = !!(entry && entry.orgaoPublico);
+  document.getElementById('publicoDetails').style.display = (entry && entry.orgaoPublico) ? 'block' : 'none';
+  document.getElementById('numProcesso').value = entry ? (entry.numProcesso || '') : '';
+  document.getElementById('previsaoPag').value = entry ? (entry.previsaoPagamento || '') : '';
 }
 function closeSheet(){
   document.getElementById('overlay').classList.remove('open');
+  editingEntryId = null;
 }
 function setTipo(t){
   currentTipo = t;
@@ -598,8 +607,7 @@ async function saveEntry(){
   if(!cliente){ setStatusMsg("Informe cliente/descrição."); return; }
 
   const isPublico = document.getElementById('isPublico').checked;
-  entries.push({
-    id: crypto.randomUUID(),
+  const payload = {
     area: currentArea,
     tipo: currentTipo,
     valor: valor,
@@ -610,7 +618,14 @@ async function saveEntry(){
     orgaoPublico: isPublico,
     numProcesso: isPublico ? document.getElementById('numProcesso').value.trim() : '',
     previsaoPagamento: isPublico ? document.getElementById('previsaoPag').value : '',
-  });
+  };
+
+  if(editingEntryId){
+    const idx = entries.findIndex(e => e.id === editingEntryId);
+    if(idx !== -1) entries[idx] = {...entries[idx], ...payload};
+  }else{
+    entries.push({ id: crypto.randomUUID(), ...payload });
+  }
   await persist();
   render();
   closeSheet();
@@ -622,19 +637,24 @@ async function deleteEntry(id){
   render();
 }
 
-function openAgendaSheet(){
+function openAgendaSheet(ag){
   document.getElementById('agendaOverlay').classList.add('open');
-  document.getElementById('agData').value = new Date().toISOString().slice(0,10);
-  document.getElementById('agHora').value = '14:00';
-  document.getElementById('agCliente').value = '';
-  document.getElementById('agDescricao').value = '';
-  document.getElementById('agHectares').value = '';
-  document.getElementById('hectaresField').style.display = 'none';
-  agendaArea = null;
-  document.querySelectorAll('#agendaAreaSelect .area-opt').forEach(el=>el.classList.remove('selected'));
+  editingAgendaId = ag ? ag.id : null;
+  document.getElementById('agendaSheetTitle').textContent = ag ? 'Editar agendamento' : 'Agendar serviço';
+  document.getElementById('agData').value = ag ? ag.data : new Date().toISOString().slice(0,10);
+  document.getElementById('agHora').value = ag ? ag.hora : '14:00';
+  document.getElementById('agCliente').value = ag ? ag.cliente : '';
+  document.getElementById('agDescricao').value = ag ? (ag.descricao || '') : '';
+  document.getElementById('agHectares').value = (ag && ag.hectares) ? ag.hectares : '';
+  agendaArea = ag ? ag.area : null;
+  document.querySelectorAll('#agendaAreaSelect .area-opt').forEach(el=>{
+    el.classList.toggle('selected', !!agendaArea && el.dataset.area === agendaArea);
+  });
+  document.getElementById('hectaresField').style.display = (agendaArea === 'Drone Pulverização') ? 'block' : 'none';
 }
 function closeAgendaSheet(){
   document.getElementById('agendaOverlay').classList.remove('open');
+  editingAgendaId = null;
 }
 function setAgendaArea(a){
   agendaArea = a;
@@ -652,11 +672,17 @@ async function saveAgendamento(){
   if(!cliente){ setStatusMsg("Informe cliente/local."); return; }
   if(!data || !hora){ setStatusMsg("Informe data e horário."); return; }
 
-  agendamentos.push({
-    id: crypto.randomUUID(), area: agendaArea, cliente, descricao,
-    data, hora, status: "Agendado",
-    hectares: agendaArea === 'Drone Pulverização' ? (parseFloat(document.getElementById('agHectares').value) || null) : null
-  });
+  const hectares = agendaArea === 'Drone Pulverização' ? (parseFloat(document.getElementById('agHectares').value) || null) : null;
+
+  if(editingAgendaId){
+    const idx = agendamentos.findIndex(a => a.id === editingAgendaId);
+    if(idx !== -1) agendamentos[idx] = {...agendamentos[idx], area: agendaArea, cliente, descricao, data, hora, hectares};
+  }else{
+    agendamentos.push({
+      id: crypto.randomUUID(), area: agendaArea, cliente, descricao,
+      data, hora, status: "Agendado", hectares
+    });
+  }
   await persistAgenda();
   render();
   closeAgendaSheet();
@@ -980,7 +1006,10 @@ function render(){
         </div>
       </div>
       <div class="entry-value ${e.tipo==='Entrada'?'entrada':'saida'}">${e.tipo==='Entrada'?'+':'-'}${fmt(e.valor)}</div>
-      <button class="del-btn" onclick="deleteEntry('${e.id}')">✕</button>
+      <div class="item-actions">
+        <button class="edit-btn" onclick="openSheet(entries.find(x=>x.id==='${e.id}'))">✎</button>
+        <button class="del-btn" onclick="deleteEntry('${e.id}')">✕</button>
+      </div>
     </div>`;
   }).join('');
 }
@@ -1056,7 +1085,10 @@ function renderAgenda(){
         <div class="agenda-title">${ag.cliente}</div>
         <div class="agenda-meta">${meta.icon} ${ag.area}${ag.descricao ? ' · ' + ag.descricao : ''}${ag.hectares ? ' · ' + ag.hectares + ' ha' : ''}</div>
       </div>
-      <div class="agenda-status ${statusCls}">${ag.status}</div>
+      <div class="item-actions">
+        <div class="agenda-status ${statusCls}">${ag.status}</div>
+        <button class="edit-btn" onclick="event.stopPropagation(); openAgendaSheet(agendamentos.find(x=>x.id==='${ag.id}'))">✎</button>
+      </div>
     </div>`;
   }).join('');
 }
