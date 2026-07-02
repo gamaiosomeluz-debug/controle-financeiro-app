@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<title>Controle Financeiro — Anderson</title>
+
+<!-- Instalação na tela inicial (iOS) -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Financeiro">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%2314161a'/%3E%3Ctext x='90' y='80' font-family='Arial' font-size='60' fill='%2334d399' text-anchor='middle'%3ER%24%3C/text%3E%3Ctext x='90' y='128' font-family='Arial' font-size='24' font-weight='bold' fill='%23f2f3f5' text-anchor='middle'%3EANDERSON%3C/text%3E%3C/svg%3E">
+
+<!-- Instalação na tela inicial (Android) -->
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#14161a">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%2314161a'/%3E%3Ctext x='90' y='80' font-family='Arial' font-size='60' fill='%2334d399' text-anchor='middle'%3ER%24%3C/text%3E%3Ctext x='90' y='128' font-family='Arial' font-size='24' font-weight='bold' fill='%23f2f3f5' text-anchor='middle'%3EANDERSON%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg: #14161a;
+    --panel: #1c1f26;
+    --panel-2: #23272f;
+    --line: #2e333d;
+    --text: #f2f3f5;
+    --muted: #9aa1ad;
+    --entrada: #34d399;
+    --saida: #f87171;
+    --pend: #fbbf24;
+    --atraso: #f87171;
+    --pago: #34d399;
+    --son: #3b82f6;
+    --map: #22c55e;
+    --pulv: #a855f7;
+    --odo: #f59e0b;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{margin:0; padding:0; background:var(--bg); color:var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;}
+  body{padding-bottom:100px;}
+  .wrap{max-width:480px; margin:0 auto; padding:16px;}
+
+  header{padding:20px 16px 8px;}
+  .eyebrow{font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); font-weight:600;}
+  h1{font-size:22px; margin:4px 0 2px; font-weight:800; letter-spacing:-0.01em;}
+  .subtitle{font-size:13px; color:var(--muted);}
+
+  .balance-card{
+    margin:16px; padding:20px; border-radius:18px;
+    background: linear-gradient(145deg, #1e2128, #171920);
+    border:1px solid var(--line);
+  }
+  .balance-label{font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em;}
+  .balance-value{font-size:34px; font-weight:800; margin-top:4px; letter-spacing:-0.02em;}
+  .balance-value.neg{color:var(--saida);}
+  .balance-sub{display:flex; gap:16px; margin-top:12px; font-size:13px;}
+  .balance-sub span.dot{display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px;}
+
+  .areas{display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:0 16px;}
+  .area-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:12px; position:relative; overflow:hidden;
+  }
+  .area-card::before{content:""; position:absolute; left:0; top:0; bottom:0; width:4px;}
+  .area-card.son::before{background:var(--son);}
+  .area-card.map::before{background:var(--map);}
+  .area-card.pulv::before{background:var(--pulv);}
+  .area-card.odo::before{background:var(--odo);}
+  .area-name{font-size:11px; color:var(--muted); font-weight:600;}
+  .area-saldo{font-size:18px; font-weight:800; margin-top:4px;}
+  .area-saldo.neg{color:var(--saida);}
+  .area-pend{font-size:11px; color:var(--pend); margin-top:4px;}
+
+  .section-title{font-size:13px; font-weight:700; color:var(--muted); text-transform:uppercase;
+    letter-spacing:.06em; margin:24px 16px 10px;}
+
+  .alert-banner{
+    margin:0 16px 12px; padding:14px; border-radius:14px; background:rgba(251,191,36,0.12);
+    border:1px solid rgba(251,191,36,0.4); display:flex; align-items:center; gap:10px;
+  }
+  .alert-banner .ico{font-size:20px;}
+  .alert-banner .txt{flex:1; font-size:13px; line-height:1.4;}
+  .alert-banner .txt b{display:block; font-size:13.5px; margin-bottom:2px;}
+  .alert-banner button{
+    background:var(--pend); color:#1c1400; border:none; border-radius:10px; padding:8px 12px;
+    font-size:12.5px; font-weight:800; cursor:pointer; white-space:nowrap;
+  }
+
+  .agenda-item{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:14px; margin:0 16px 10px; display:flex; align-items:center; gap:12px; cursor:pointer;
+  }
+  .agenda-time{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:var(--panel-2); border-radius:10px; padding:8px 10px; min-width:52px;
+  }
+  .agenda-time .h{font-size:15px; font-weight:800;}
+  .agenda-time .d{font-size:9.5px; color:var(--muted); text-transform:uppercase; margin-top:1px;}
+  .agenda-main{flex:1; min-width:0;}
+  .agenda-title{font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .agenda-meta{font-size:11.5px; color:var(--muted); margin-top:2px;}
+  .agenda-status{font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:20px; white-space:nowrap;}
+  .agenda-status.agendado{background:rgba(59,130,246,0.15); color:var(--son);}
+  .agenda-status.concluido{background:rgba(52,211,153,0.15); color:var(--pago);}
+  .agenda-status.atrasado{background:rgba(248,113,113,0.15); color:var(--saida);}
+
+  .entry{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:14px; margin:0 16px 10px; display:flex; align-items:center; gap:12px;
+  }
+  .entry-icon{width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center;
+    font-size:16px; font-weight:800; flex-shrink:0;}
+  .entry-icon.entrada{background:rgba(52,211,153,0.15); color:var(--entrada);}
+  .entry-icon.saida{background:rgba(248,113,113,0.15); color:var(--saida);}
+  .entry-main{flex:1; min-width:0;}
+  .entry-title{font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .entry-meta{font-size:11.5px; color:var(--muted); margin-top:2px; display:flex; gap:6px; align-items:center; flex-wrap:wrap;}
+  .tag{padding:1px 7px; border-radius:20px; font-size:10.5px; font-weight:700;}
+  .tag.pago{background:rgba(52,211,153,0.15); color:var(--pago);}
+  .tag.pendente{background:rgba(251,191,36,0.15); color:var(--pend);}
+  .tag.atrasado{background:rgba(248,113,113,0.15); color:var(--atraso);}
+  .entry-value{font-size:15px; font-weight:800; white-space:nowrap;}
+  .entry-value.entrada{color:var(--entrada);}
+  .entry-value.saida{color:var(--saida);}
+  .del-btn{background:none; border:none; color:var(--muted); font-size:18px; padding:4px 6px; cursor:pointer; line-height:1;}
+
+  .empty{padding:30px 16px; text-align:center; color:var(--muted); font-size:13px;}
+
+  .fab{
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+    background:var(--text); color:var(--bg); border:none; border-radius:999px;
+    padding:14px 26px; font-size:15px; font-weight:800; box-shadow:0 8px 24px rgba(0,0,0,0.4);
+    display:flex; align-items:center; gap:8px; cursor:pointer; z-index:50;
+  }
+
+  .sheet-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:100;
+    display:none; align-items:flex-end; justify-content:center;
+  }
+  .sheet-overlay.open{display:flex;}
+  .sheet{
+    width:100%; max-width:480px; background:var(--panel); border-radius:22px 22px 0 0;
+    padding:20px 18px calc(20px + env(safe-area-inset-bottom));
+    max-height:88vh; overflow-y:auto;
+  }
+  .sheet-handle{width:36px; height:4px; background:var(--line); border-radius:4px; margin:0 auto 16px;}
+  .sheet h2{font-size:18px; margin:0 0 16px; font-weight:800;}
+
+  .toggle-row{display:flex; gap:8px; margin-bottom:14px;}
+  .toggle-btn{flex:1; padding:12px; border-radius:12px; border:1px solid var(--line); background:var(--panel-2);
+    color:var(--muted); font-weight:700; font-size:14px; cursor:pointer;}
+  .toggle-btn.active-entrada{background:rgba(52,211,153,0.15); color:var(--entrada); border-color:var(--entrada);}
+  .toggle-btn.active-saida{background:rgba(248,113,113,0.15); color:var(--saida); border-color:var(--saida);}
+
+  label{display:block; font-size:12px; color:var(--muted); font-weight:600; margin:12px 0 6px;}
+  input, select{
+    width:100%; padding:13px 14px; border-radius:12px; border:1px solid var(--line);
+    background:var(--panel-2); color:var(--text); font-size:15px; font-family:inherit;
+  }
+  input:focus, select:focus{outline:2px solid var(--son); border-color:var(--son);}
+
+  .area-select{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  .area-opt{padding:11px; border-radius:12px; border:1px solid var(--line); background:var(--panel-2);
+    color:var(--text); font-size:13px; font-weight:600; text-align:center; cursor:pointer;}
+  .area-opt.selected{border-width:2px;}
+  .area-opt.son.selected{border-color:var(--son); background:rgba(59,130,246,0.15);}
+  .area-opt.map.selected{border-color:var(--map); background:rgba(34,197,94,0.15);}
+  .area-opt.pulv.selected{border-color:var(--pulv); background:rgba(168,85,247,0.15);}
+  .area-opt.odo.selected{border-color:var(--odo); background:rgba(245,158,11,0.15);}
+
+  .status-row{display:flex; gap:8px;}
+  .status-opt{flex:1; padding:10px; border-radius:12px; border:1px solid var(--line); background:var(--panel-2);
+    color:var(--muted); font-size:12.5px; font-weight:700; text-align:center; cursor:pointer;}
+  .status-opt.selected.pago{background:rgba(52,211,153,0.15); color:var(--pago); border-color:var(--pago);}
+  .status-opt.selected.pendente{background:rgba(251,191,36,0.15); color:var(--pend); border-color:var(--pend);}
+  .status-opt.selected.atrasado{background:rgba(248,113,113,0.15); color:var(--atraso); border-color:var(--atraso);}
+
+  .save-btn{
+    width:100%; margin-top:20px; padding:15px; border-radius:14px; border:none;
+    background:var(--text); color:var(--bg); font-size:15px; font-weight:800; cursor:pointer;
+  }
+  .cancel-btn{
+    width:100%; margin-top:8px; padding:13px; border-radius:14px; border:1px solid var(--line);
+    background:transparent; color:var(--muted); font-size:14px; font-weight:600; cursor:pointer;
+  }
+  .status-msg{text-align:center; font-size:12px; color:var(--muted); padding:8px 16px;}
+  .export-btn{
+    display:block; width:calc(100% - 32px); margin:0 16px 4px; padding:12px;
+    border-radius:12px; border:1px solid var(--line); background:var(--panel);
+    color:var(--text); font-size:13.5px; font-weight:700; cursor:pointer;
+  }
+  .export-btn:active{background:var(--panel-2);}
+  .input-mic-row{display:flex; gap:8px; align-items:center;}
+  .input-mic-row input{flex:1;}
+  .mic-btn{
+    flex-shrink:0; width:46px; height:46px; border-radius:12px; border:1px solid var(--line);
+    background:var(--panel-2); font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .mic-btn.listening{background:rgba(248,113,113,0.2); border-color:var(--saida); animation:pulse 1s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;} 50%{opacity:0.5;}}
+  .mic-hint{font-size:11px; color:var(--muted); margin-top:6px; text-align:center;}
+
+  .equip-item{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:14px; margin:0 16px 10px; display:flex; align-items:center; gap:12px;
+  }
+  .equip-icon{width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center;
+    font-size:18px; flex-shrink:0; background:var(--panel-2);}
+  .equip-main{flex:1; min-width:0;}
+  .equip-title{font-size:14px; font-weight:600;}
+  .equip-meta{font-size:11.5px; color:var(--muted); margin-top:2px;}
+  .equip-status{font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:20px; white-space:nowrap;}
+  .equip-status.ok{background:rgba(52,211,153,0.15); color:var(--pago);}
+  .equip-status.atencao{background:rgba(251,191,36,0.15); color:var(--pend);}
+  .equip-status.atrasado{background:rgba(248,113,113,0.15); color:var(--saida);}
+  .equip-btn{
+    background:none; border:1px solid var(--line); color:var(--muted); border-radius:10px;
+    padding:6px 10px; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap;
+  }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Controle Financeiro</div>
+    <h1>Olá, Anderson 👋</h1>
+    <div class="subtitle">Sonorização · Drones · Manutenção Odonto</div>
+  </header>
+
+  <button class="export-btn" onclick="exportToExcel()">📤 Exportar para planilha Excel</button>
+  <button class="export-btn" onclick="openAgendaSheet()">📅 Agendar serviço</button>
+  <button class="export-btn" onclick="openEquipSheet()">🛠️ Meus equipamentos</button>
+
+  <div class="balance-card">
+    <div class="balance-label">Saldo geral</div>
+    <div class="balance-value" id="totalBalance">R$ 0,00</div>
+    <div class="balance-sub">
+      <div><span class="dot" style="background:var(--entrada)"></span><span id="totalEntradas">R$ 0</span></div>
+      <div><span class="dot" style="background:var(--saida)"></span><span id="totalSaidas">R$ 0</span></div>
+      <div><span class="dot" style="background:var(--pend)"></span><span id="totalPendente">R$ 0 pend.</span></div>
+    </div>
+  </div>
+
+  <div class="areas" id="areaCards"></div>
+
+  <div id="alertsWrap"></div>
+
+  <div class="section-title">Equipamentos</div>
+  <div id="equipList"></div>
+
+  <div class="section-title">Agenda</div>
+  <div id="agendaList"></div>
+
+  <div class="section-title">Lançamentos recentes</div>
+  <div id="entriesList"></div>
+  <div id="statusMsg" class="status-msg"></div>
+</div>
+
+<button class="fab" onclick="openSheet()">＋ Novo lançamento</button>
+
+<div class="sheet-overlay" id="overlay" onclick="if(event.target===this)closeSheet()">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2>Novo lançamento</h2>
+
+    <div class="toggle-row">
+      <button type="button" class="toggle-btn" id="btnEntrada" onclick="setTipo('Entrada')">↓ Entrada</button>
+      <button type="button" class="toggle-btn" id="btnSaida" onclick="setTipo('Saída')">↑ Saída</button>
+    </div>
+
+    <label>Área do negócio</label>
+    <div class="area-select" id="areaSelect">
+      <div class="area-opt son" data-area="Sonorização" onclick="setArea('Sonorização')">🔊 Sonorização</div>
+      <div class="area-opt map" data-area="Drone Mapeamento" onclick="setArea('Drone Mapeamento')">🛰️ Mapeamento</div>
+      <div class="area-opt pulv" data-area="Drone Pulverização" onclick="setArea('Drone Pulverização')">🌾 Pulverização</div>
+      <div class="area-opt odo" data-area="Manutenção Odonto" onclick="setArea('Manutenção Odonto')">🦷 Odonto</div>
+    </div>
+
+    <label for="valor">Valor (R$)</label>
+    <input type="number" id="valor" inputmode="decimal" placeholder="0,00" step="0.01">
+
+    <label for="cliente">Cliente / Descrição</label>
+    <input type="text" id="cliente" placeholder="Ex: Jaime Borba, diesel, gerador...">
+
+    <label for="categoria">Categoria</label>
+    <select id="categoria">
+      <option value="">Selecione...</option>
+      <optgroup label="Entradas">
+        <option value="Serviço prestado">Serviço prestado</option>
+        <option value="Venda">Venda</option>
+      </optgroup>
+      <optgroup label="Saídas">
+        <option value="Combustível">Combustível</option>
+        <option value="Peças/Materiais">Peças/Materiais</option>
+        <option value="Manutenção equipamento">Manutenção equipamento</option>
+        <option value="Transporte">Transporte</option>
+        <option value="Alimentação">Alimentação</option>
+        <option value="Impostos/Taxas">Impostos/Taxas</option>
+        <option value="Outros">Outros</option>
+      </optgroup>
+    </select>
+
+    <label for="data">Data</label>
+    <input type="date" id="data">
+
+    <div id="publicoField" style="display:none;">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer;" onclick="togglePublico()">
+        <input type="checkbox" id="isPublico" style="width:auto; accent-color:var(--son);" onclick="event.stopPropagation()">
+        <span style="font-size:13px; color:var(--text); font-weight:600;">🏛️ Cliente é órgão público (prefeitura)</span>
+      </label>
+      <div id="publicoDetails" style="display:none;">
+        <label for="numProcesso">Nº do processo/empenho/NF</label>
+        <input type="text" id="numProcesso" placeholder="Ex: Processo 2026/0341">
+        <label for="previsaoPag">Previsão de pagamento</label>
+        <input type="date" id="previsaoPag">
+      </div>
+    </div>
+
+    <label>Status</label>
+    <div class="status-row" id="statusSelect">
+      <div class="status-opt pago" data-status="Pago" onclick="setStatus('Pago')">Pago</div>
+      <div class="status-opt pendente" data-status="Pendente" onclick="setStatus('Pendente')">Pendente</div>
+      <div class="status-opt atrasado" data-status="Atrasado" onclick="setStatus('Atrasado')">Atrasado</div>
+    </div>
+
+    <button class="save-btn" onclick="saveEntry()">Salvar lançamento</button>
+    <button class="cancel-btn" onclick="closeSheet()">Cancelar</button>
+  </div>
+</div>
+
+<div class="sheet-overlay" id="agendaOverlay" onclick="if(event.target===this)closeAgendaSheet()">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2>Agendar serviço</h2>
+
+    <label>Área do negócio</label>
+    <div class="area-select" id="agendaAreaSelect">
+      <div class="area-opt son" data-area="Sonorização" onclick="setAgendaArea('Sonorização')">🔊 Sonorização</div>
+      <div class="area-opt map" data-area="Drone Mapeamento" onclick="setAgendaArea('Drone Mapeamento')">🛰️ Mapeamento</div>
+      <div class="area-opt pulv" data-area="Drone Pulverização" onclick="setAgendaArea('Drone Pulverização')">🌾 Pulverização</div>
+      <div class="area-opt odo" data-area="Manutenção Odonto" onclick="setAgendaArea('Manutenção Odonto')">🦷 Odonto</div>
+    </div>
+
+    <label for="agCliente">Cliente / Local</label>
+    <div class="input-mic-row">
+      <input type="text" id="agCliente" placeholder="Ex: Consultório Dr. Fulano">
+      <button type="button" class="mic-btn" id="micCliente" onclick="startDictation('agCliente','micCliente')">🎤</button>
+    </div>
+
+    <label for="agDescricao">O que vai fazer</label>
+    <div class="input-mic-row">
+      <input type="text" id="agDescricao" placeholder="Ex: Manutenção autoclave">
+      <button type="button" class="mic-btn" id="micDescricao" onclick="startDictation('agDescricao','micDescricao')">🎤</button>
+    </div>
+
+    <label for="agData">Data</label>
+    <input type="date" id="agData">
+
+    <label for="agHora">Horário</label>
+    <input type="time" id="agHora">
+
+    <div id="hectaresField" style="display:none;">
+      <label for="agHectares">Hectares (consultar app SmartFarm)</label>
+      <input type="number" id="agHectares" inputmode="decimal" placeholder="Ex: 18" step="0.1">
+    </div>
+
+    <div class="mic-hint" id="micHint"></div>
+
+    <button class="save-btn" onclick="saveAgendamento()">Salvar agendamento</button>
+    <button class="cancel-btn" onclick="closeAgendaSheet()">Cancelar</button>
+  </div>
+</div>
+
+<div class="sheet-overlay" id="confirmOverlay" onclick="if(event.target===this)closeConfirmSheet()">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2 id="confirmTitle">Como foi a visita?</h2>
+
+    <div class="toggle-row">
+      <button type="button" class="toggle-btn" id="btnFez" onclick="setFez(true)">✓ Serviço feito</button>
+      <button type="button" class="toggle-btn" id="btnNaoFez" onclick="setFez(false)">✕ Não fiz</button>
+    </div>
+
+    <div id="confirmDetails" style="display:none;">
+      <label for="cfValor">Valor cobrado pelo serviço (R$)</label>
+      <input type="number" id="cfValor" inputmode="decimal" placeholder="0,00" step="0.01">
+
+      <label for="cfPecas">Custo com peças/materiais (R$) — deixe 0 se não teve</label>
+      <input type="number" id="cfPecas" inputmode="decimal" placeholder="0,00" step="0.01" value="0">
+
+      <label>O valor cobrado já foi pago?</label>
+      <div class="status-row" id="confirmStatusSelect">
+        <div class="status-opt pago" data-status="Pago" onclick="setConfirmStatus('Pago')">Pago</div>
+        <div class="status-opt pendente" data-status="Pendente" onclick="setConfirmStatus('Pendente')">Pendente</div>
+      </div>
+
+      <label for="cfObs">Observações (opcional)</label>
+      <input type="text" id="cfObs" placeholder="Ex: trocou peça X, voltar semana que vem...">
+    </div>
+
+    <button class="save-btn" onclick="saveConfirmacao()">Registrar</button>
+    <button class="cancel-btn" onclick="closeConfirmSheet()">Deixar para depois</button>
+  </div>
+</div>
+
+<div class="sheet-overlay" id="equipOverlay" onclick="if(event.target===this)closeEquipSheet()">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2>Meus equipamentos</h2>
+    <div id="equipManageList"></div>
+
+    <label>Novo equipamento</label>
+    <select id="eqTipo">
+      <option value="Drone">🛰️ Drone</option>
+      <option value="Sonorização">🔊 Equip. Sonorização</option>
+      <option value="Odonto">🦷 Equip. Odonto</option>
+      <option value="Outro">🔧 Outro</option>
+    </select>
+
+    <label for="eqNome">Nome / Identificação</label>
+    <input type="text" id="eqNome" placeholder="Ex: Mavic 4 Pro, Caixa de som JBL...">
+
+    <label for="eqIntervalo">Revisar a cada quantos dias?</label>
+    <input type="number" id="eqIntervalo" placeholder="Ex: 30" value="30">
+
+    <label for="eqUltima">Última manutenção/revisão</label>
+    <input type="date" id="eqUltima">
+
+    <button class="save-btn" onclick="saveEquipamento()">Adicionar equipamento</button>
+    <button class="cancel-btn" onclick="closeEquipSheet()">Fechar</button>
+  </div>
+</div>
+
+<script>
+const AREAS = {
+  "Sonorização": {cls:"son", icon:"🔊"},
+  "Drone Mapeamento": {cls:"map", icon:"🛰️"},
+  "Drone Pulverização": {cls:"pulv", icon:"🌾"},
+  "Manutenção Odonto": {cls:"odo", icon:"🦷"},
+};
+const STORAGE_KEY = "lancamentos";
+const AGENDA_KEY = "agendamentos";
+const EQUIP_KEY = "equipamentos";
+let entries = [];
+let agendamentos = [];
+let equipamentos = [];
+let currentTipo = "Entrada";
+let currentArea = null;
+let currentStatus = "Pago";
+let agendaArea = null;
+let confirmFez = null;
+let confirmStatus = "Pago";
+let activeAgendaId = null;
+
+const fmt = v => "R$ " + Number(v||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+function seedData(){
+  const today = new Date().toISOString().slice(0,10);
+  return [
+    {id:crypto.randomUUID(), area:"Manutenção Odonto", tipo:"Entrada", valor:120, cliente:"Dentista Ketlyn", categoria:"Serviço prestado", status:"Pago", data:today},
+    {id:crypto.randomUUID(), area:"Manutenção Odonto", tipo:"Saída", valor:50, cliente:"Combustível (carro)", categoria:"Combustível", status:"Pago", data:today},
+    {id:crypto.randomUUID(), area:"Drone Pulverização", tipo:"Entrada", valor:2700, cliente:"Jaime Borba — 18 hectares", categoria:"Serviço prestado", status:"Pago", data:today},
+    {id:crypto.randomUUID(), area:"Drone Pulverização", tipo:"Saída", valor:240, cliente:"Diesel", categoria:"Combustível", status:"Pago", data:today},
+    {id:crypto.randomUUID(), area:"Drone Pulverização", tipo:"Saída", valor:130, cliente:"Gasolina (gerador)", categoria:"Combustível", status:"Pago", data:today},
+  ];
+}
+
+async function storageGet(key){
+  try{
+    if(window.storage && typeof window.storage.get === 'function'){
+      const res = await window.storage.get(key, false);
+      return res ? res.value : null;
+    }
+  }catch(e){}
+  try{ return localStorage.getItem(key); }catch(e){ return null; }
+}
+async function storageSet(key, value){
+  try{
+    if(window.storage && typeof window.storage.set === 'function'){
+      await window.storage.set(key, value, false);
+      return true;
+    }
+  }catch(e){}
+  try{ localStorage.setItem(key, value); return true; }catch(e){ return false; }
+}
+
+async function loadEntries(){
+  try{
+    const raw = await storageGet(STORAGE_KEY);
+    entries = raw ? JSON.parse(raw) : [];
+    if(entries.length === 0){
+      entries = seedData();
+      await persist();
+    }
+  }catch(e){
+    entries = seedData();
+    await persist();
+  }
+  try{
+    const raw2 = await storageGet(AGENDA_KEY);
+    agendamentos = raw2 ? JSON.parse(raw2) : [];
+  }catch(e){
+    agendamentos = [];
+  }
+  try{
+    const raw3 = await storageGet(EQUIP_KEY);
+    equipamentos = raw3 ? JSON.parse(raw3) : [];
+    if(equipamentos.length === 0){
+      equipamentos = seedEquip();
+      await persistEquip();
+    }
+  }catch(e){
+    equipamentos = seedEquip();
+    await persistEquip();
+  }
+  render();
+}
+
+function seedEquip(){
+  const today = new Date().toISOString().slice(0,10);
+  return [
+    {id:crypto.randomUUID(), tipo:"Drone", nome:"Mini 4 Pro (mapeamento)", intervalo:30, ultima:today},
+    {id:crypto.randomUUID(), tipo:"Drone", nome:"T25 (pulverização)", intervalo:15, ultima:today},
+  ];
+}
+
+async function persist(){
+  const ok = await storageSet(STORAGE_KEY, JSON.stringify(entries));
+  if(!ok) setStatusMsg("Não consegui salvar agora. Tente novamente.");
+}
+
+async function persistAgenda(){
+  const ok = await storageSet(AGENDA_KEY, JSON.stringify(agendamentos));
+  if(!ok) setStatusMsg("Não consegui salvar o agendamento agora.");
+}
+
+async function persistEquip(){
+  const ok = await storageSet(EQUIP_KEY, JSON.stringify(equipamentos));
+  if(!ok) setStatusMsg("Não consegui salvar o equipamento agora.");
+}
+
+function setStatusMsg(msg){
+  document.getElementById('statusMsg').textContent = msg;
+  if(msg) setTimeout(()=>{ document.getElementById('statusMsg').textContent=''; }, 2500);
+}
+
+function openSheet(){
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('data').value = new Date().toISOString().slice(0,10);
+  setTipo('Entrada');
+  currentArea = null;
+  document.querySelectorAll('.area-opt').forEach(el=>el.classList.remove('selected'));
+  setStatus('Pago');
+  document.getElementById('valor').value = '';
+  document.getElementById('cliente').value = '';
+  document.getElementById('categoria').value = '';
+  document.getElementById('isPublico').checked = false;
+  document.getElementById('publicoDetails').style.display = 'none';
+  document.getElementById('numProcesso').value = '';
+  document.getElementById('previsaoPag').value = '';
+}
+function closeSheet(){
+  document.getElementById('overlay').classList.remove('open');
+}
+function setTipo(t){
+  currentTipo = t;
+  document.getElementById('btnEntrada').classList.toggle('active-entrada', t==='Entrada');
+  document.getElementById('btnSaida').classList.toggle('active-saida', t==='Saída');
+  document.getElementById('publicoField').style.display = (t === 'Entrada') ? 'block' : 'none';
+}
+function togglePublico(){
+  const chk = document.getElementById('isPublico');
+  chk.checked = !chk.checked;
+  document.getElementById('publicoDetails').style.display = chk.checked ? 'block' : 'none';
+}
+function setArea(a){
+  currentArea = a;
+  document.querySelectorAll('.area-opt').forEach(el=>{
+    el.classList.toggle('selected', el.dataset.area === a);
+  });
+}
+function setStatus(s){
+  currentStatus = s;
+  document.querySelectorAll('.status-opt').forEach(el=>{
+    el.classList.toggle('selected', el.dataset.status === s);
+  });
+}
+
+async function saveEntry(){
+  const valor = parseFloat(document.getElementById('valor').value);
+  const cliente = document.getElementById('cliente').value.trim();
+  const data = document.getElementById('data').value;
+  if(!currentArea){ setStatusMsg("Escolha uma área."); return; }
+  if(!valor || valor <= 0){ setStatusMsg("Informe um valor válido."); return; }
+  if(!cliente){ setStatusMsg("Informe cliente/descrição."); return; }
+
+  const isPublico = document.getElementById('isPublico').checked;
+  entries.push({
+    id: crypto.randomUUID(),
+    area: currentArea,
+    tipo: currentTipo,
+    valor: valor,
+    cliente: cliente,
+    categoria: document.getElementById('categoria').value,
+    status: currentStatus,
+    data: data || new Date().toISOString().slice(0,10),
+    orgaoPublico: isPublico,
+    numProcesso: isPublico ? document.getElementById('numProcesso').value.trim() : '',
+    previsaoPagamento: isPublico ? document.getElementById('previsaoPag').value : '',
+  });
+  await persist();
+  render();
+  closeSheet();
+}
+
+async function deleteEntry(id){
+  entries = entries.filter(e => e.id !== id);
+  await persist();
+  render();
+}
+
+function openAgendaSheet(){
+  document.getElementById('agendaOverlay').classList.add('open');
+  document.getElementById('agData').value = new Date().toISOString().slice(0,10);
+  document.getElementById('agHora').value = '14:00';
+  document.getElementById('agCliente').value = '';
+  document.getElementById('agDescricao').value = '';
+  document.getElementById('agHectares').value = '';
+  document.getElementById('hectaresField').style.display = 'none';
+  agendaArea = null;
+  document.querySelectorAll('#agendaAreaSelect .area-opt').forEach(el=>el.classList.remove('selected'));
+}
+function closeAgendaSheet(){
+  document.getElementById('agendaOverlay').classList.remove('open');
+}
+function setAgendaArea(a){
+  agendaArea = a;
+  document.querySelectorAll('#agendaAreaSelect .area-opt').forEach(el=>{
+    el.classList.toggle('selected', el.dataset.area === a);
+  });
+  document.getElementById('hectaresField').style.display = (a === 'Drone Pulverização') ? 'block' : 'none';
+}
+async function saveAgendamento(){
+  const cliente = document.getElementById('agCliente').value.trim();
+  const descricao = document.getElementById('agDescricao').value.trim();
+  const data = document.getElementById('agData').value;
+  const hora = document.getElementById('agHora').value;
+  if(!agendaArea){ setStatusMsg("Escolha uma área."); return; }
+  if(!cliente){ setStatusMsg("Informe cliente/local."); return; }
+  if(!data || !hora){ setStatusMsg("Informe data e horário."); return; }
+
+  agendamentos.push({
+    id: crypto.randomUUID(), area: agendaArea, cliente, descricao,
+    data, hora, status: "Agendado",
+    hectares: agendaArea === 'Drone Pulverização' ? (parseFloat(document.getElementById('agHectares').value) || null) : null
+  });
+  await persistAgenda();
+  render();
+  closeAgendaSheet();
+  requestNotifyPermission();
+}
+
+function openConfirmSheet(agId){
+  activeAgendaId = agId;
+  const ag = agendamentos.find(a=>a.id===agId);
+  if(!ag) return;
+  document.getElementById('confirmTitle').textContent = `${ag.cliente} — ${ag.descricao || 'visita'}`;
+  document.getElementById('confirmOverlay').classList.add('open');
+  document.getElementById('confirmDetails').style.display = 'none';
+  confirmFez = null;
+  document.getElementById('btnFez').classList.remove('active-entrada');
+  document.getElementById('btnNaoFez').classList.remove('active-saida');
+  document.getElementById('cfValor').value = '';
+  document.getElementById('cfPecas').value = '0';
+  document.getElementById('cfObs').value = '';
+  setConfirmStatus('Pago');
+}
+function closeConfirmSheet(){
+  document.getElementById('confirmOverlay').classList.remove('open');
+  activeAgendaId = null;
+}
+function setFez(v){
+  confirmFez = v;
+  document.getElementById('btnFez').classList.toggle('active-entrada', v===true);
+  document.getElementById('btnNaoFez').classList.toggle('active-saida', v===false);
+  document.getElementById('confirmDetails').style.display = v ? 'block' : 'none';
+}
+function setConfirmStatus(s){
+  confirmStatus = s;
+  document.querySelectorAll('#confirmStatusSelect .status-opt').forEach(el=>{
+    el.classList.toggle('selected', el.dataset.status === s);
+  });
+}
+async function saveConfirmacao(){
+  const ag = agendamentos.find(a=>a.id===activeAgendaId);
+  if(!ag) return;
+
+  if(confirmFez === false){
+    ag.status = "Não realizado";
+    await persistAgenda();
+    render();
+    closeConfirmSheet();
+    return;
+  }
+  if(confirmFez === null){ setStatusMsg("Diga se o serviço foi feito."); return; }
+
+  const valor = parseFloat(document.getElementById('cfValor').value) || 0;
+  const pecas = parseFloat(document.getElementById('cfPecas').value) || 0;
+  const obs = document.getElementById('cfObs').value.trim();
+
+  if(valor > 0){
+    entries.push({
+      id: crypto.randomUUID(), area: ag.area, tipo: "Entrada", valor,
+      cliente: `${ag.cliente}${obs ? ' — ' + obs : ''}`, categoria: "Serviço prestado", status: confirmStatus, data: ag.data
+    });
+  }
+  if(pecas > 0){
+    entries.push({
+      id: crypto.randomUUID(), area: ag.area, tipo: "Saída", valor: pecas,
+      cliente: `Peças/materiais — ${ag.cliente}`, categoria: "Peças/Materiais", status: "Pago", data: ag.data
+    });
+  }
+  await persist();
+
+  ag.status = "Concluído";
+  await persistAgenda();
+  render();
+  closeConfirmSheet();
+  setStatusMsg("Registrado! Lançamento atualizado.");
+}
+
+function openEquipSheet(){
+  document.getElementById('equipOverlay').classList.add('open');
+  document.getElementById('eqNome').value = '';
+  document.getElementById('eqIntervalo').value = '30';
+  document.getElementById('eqUltima').value = new Date().toISOString().slice(0,10);
+  renderEquipManageList();
+}
+function closeEquipSheet(){
+  document.getElementById('equipOverlay').classList.remove('open');
+}
+async function saveEquipamento(){
+  const tipo = document.getElementById('eqTipo').value;
+  const nome = document.getElementById('eqNome').value.trim();
+  const intervalo = parseInt(document.getElementById('eqIntervalo').value) || 30;
+  const ultima = document.getElementById('eqUltima').value || new Date().toISOString().slice(0,10);
+  if(!nome){ setStatusMsg("Dê um nome ao equipamento."); return; }
+  equipamentos.push({id: crypto.randomUUID(), tipo, nome, intervalo, ultima});
+  await persistEquip();
+  document.getElementById('eqNome').value = '';
+  renderEquipManageList();
+  render();
+}
+async function marcarManutencao(id){
+  const eq = equipamentos.find(e=>e.id===id);
+  if(!eq) return;
+  eq.ultima = new Date().toISOString().slice(0,10);
+  await persistEquip();
+  renderEquipManageList();
+  render();
+  setStatusMsg("Manutenção registrada!");
+}
+async function removerEquipamento(id){
+  equipamentos = equipamentos.filter(e=>e.id!==id);
+  await persistEquip();
+  renderEquipManageList();
+  render();
+}
+
+function equipIcon(tipo){
+  return {Drone:"🛰️", "Sonorização":"🔊", Odonto:"🦷", Outro:"🔧"}[tipo] || "🔧";
+}
+function equipStatus(eq){
+  const dias = Math.floor((new Date() - new Date(eq.ultima)) / 86400000);
+  if(dias >= eq.intervalo) return {cls:"atrasado", label:`${dias - eq.intervalo}d atrasado`};
+  if(dias >= eq.intervalo * 0.8) return {cls:"atencao", label:`em ${eq.intervalo - dias}d`};
+  return {cls:"ok", label:`em ${eq.intervalo - dias}d`};
+}
+
+function renderEquipManageList(){
+  const wrap = document.getElementById('equipManageList');
+  if(equipamentos.length === 0){ wrap.innerHTML = `<div class="empty">Nenhum equipamento cadastrado.</div>`; return; }
+  wrap.innerHTML = equipamentos.map(eq=>{
+    const st = equipStatus(eq);
+    return `<div class="equip-item">
+      <div class="equip-icon">${equipIcon(eq.tipo)}</div>
+      <div class="equip-main">
+        <div class="equip-title">${eq.nome}</div>
+        <div class="equip-meta">Revisão a cada ${eq.intervalo}d · última em ${eq.ultima.split('-').reverse().join('/')}</div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
+        <span class="equip-status ${st.cls}">${st.label}</span>
+        <button class="equip-btn" onclick="marcarManutencao('${eq.id}')">Revisei hoje</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderEquip(){
+  const wrap = document.getElementById('equipList');
+  if(equipamentos.length === 0){ wrap.innerHTML = `<div class="empty">Nenhum equipamento cadastrado.</div>`; return; }
+  const atencao = equipamentos.filter(eq => equipStatus(eq).cls !== 'ok');
+  const lista = atencao.length > 0 ? atencao : equipamentos;
+  wrap.innerHTML = lista.map(eq=>{
+    const st = equipStatus(eq);
+    return `<div class="equip-item">
+      <div class="equip-icon">${equipIcon(eq.tipo)}</div>
+      <div class="equip-main">
+        <div class="equip-title">${eq.nome}</div>
+        <div class="equip-meta">Última revisão: ${eq.ultima.split('-').reverse().join('/')}</div>
+      </div>
+      <span class="equip-status ${st.cls}">${st.label}</span>
+    </div>`;
+  }).join('');
+}
+
+function requestNotifyPermission(){
+  if('Notification' in window && Notification.permission === 'default'){
+    Notification.requestPermission();
+  }
+}
+
+function startDictation(inputId, btnId){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const hint = document.getElementById('micHint');
+  if(!SR){
+    hint.textContent = "Ditado por voz não é suportado neste navegador/aparelho.";
+    return;
+  }
+  const btn = document.getElementById(btnId);
+  const recognition = new SR();
+  recognition.lang = 'pt-BR';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  btn.classList.add('listening');
+  hint.textContent = "Ouvindo... fale agora.";
+
+  recognition.onresult = (event) => {
+    const text = event.results[0][0].transcript;
+    const input = document.getElementById(inputId);
+    input.value = input.value ? input.value + ' ' + text : text;
+    hint.textContent = "Capturado: \"" + text + "\"";
+  };
+  recognition.onerror = (event) => {
+    hint.textContent = event.error === 'not-allowed'
+      ? "Permissão de microfone negada. Ative nas configurações do navegador."
+      : "Não entendi, tente novamente.";
+  };
+  recognition.onend = () => {
+    btn.classList.remove('listening');
+  };
+  try{
+    recognition.start();
+  }catch(e){
+    btn.classList.remove('listening');
+    hint.textContent = "Não foi possível iniciar o microfone.";
+  }
+}
+
+function checkAgendaTimers(){
+  if(!('Notification' in window) || Notification.permission !== 'granted') return;
+  const now = new Date();
+  agendamentos.forEach(ag=>{
+    if(ag.status !== 'Agendado' || ag.notified) return;
+    const when = new Date(`${ag.data}T${ag.hora}`);
+    if(when <= now && (now - when) < 5*60*1000){
+      try{
+        new Notification('Compromisso agora', {
+          body: `${ag.cliente} — ${ag.descricao || 'visita técnica'} às ${ag.hora}`
+        });
+      }catch(e){}
+      ag.notified = true;
+      persistAgenda();
+    }
+  });
+}
+setInterval(checkAgendaTimers, 60000);
+
+function exportToExcel(){
+  if(entries.length === 0){ setStatusMsg("Nenhum lançamento para exportar ainda."); return; }
+  const wb = XLSX.utils.book_new();
+
+  // Aba Dashboard
+  const dashRows = [["Área","Entradas (R$)","Saídas (R$)","Saldo (R$)","Pendente (R$)"]];
+  let totE=0, totS=0, totP=0;
+  Object.keys(AREAS).forEach(area=>{
+    const items = entries.filter(e=>e.area===area);
+    const ent = items.filter(e=>e.tipo==='Entrada').reduce((s,e)=>s+e.valor,0);
+    const sai = items.filter(e=>e.tipo==='Saída').reduce((s,e)=>s+e.valor,0);
+    const pend = items.filter(e=>e.status!=='Pago').reduce((s,e)=>s+e.valor,0);
+    dashRows.push([area, ent, sai, ent-sai, pend]);
+    totE+=ent; totS+=sai; totP+=pend;
+  });
+  dashRows.push(["TOTAL GERAL", totE, totS, totE-totS, totP]);
+  const dashSheet = XLSX.utils.aoa_to_sheet(dashRows);
+  dashSheet['!cols'] = [{wch:22},{wch:16},{wch:16},{wch:16},{wch:16}];
+  XLSX.utils.book_append_sheet(wb, dashSheet, "Dashboard");
+
+  // Uma aba por área
+  Object.keys(AREAS).forEach(area=>{
+    const rows = [["Data","Cliente","Descrição","Tipo","Categoria","Valor (R$)","Status","Observações"]];
+    entries.filter(e=>e.area===area)
+      .sort((a,b)=>a.data.localeCompare(b.data))
+      .forEach(e=>{
+        const obs = e.orgaoPublico
+          ? `Órgão público${e.numProcesso ? ' - ' + e.numProcesso : ''}${e.previsaoPagamento ? ' - Previsão: ' + e.previsaoPagamento.split('-').reverse().join('/') : ''}`
+          : '';
+        rows.push([e.data.split('-').reverse().join('/'), e.cliente, e.cliente, e.tipo, e.categoria || "", e.valor, e.status, obs]);
+      });
+    const sheet = XLSX.utils.aoa_to_sheet(rows);
+    sheet['!cols'] = [{wch:12},{wch:22},{wch:26},{wch:10},{wch:16},{wch:12},{wch:12},{wch:22}];
+    XLSX.utils.book_append_sheet(wb, sheet, area.slice(0,31));
+  });
+
+  const filename = `Controle_Financeiro_Anderson_${new Date().toISOString().slice(0,10)}.xlsx`;
+  XLSX.writeFile(wb, filename);
+  setStatusMsg("Planilha exportada! Confira seus downloads.");
+}
+
+function render(){
+  let totalEntradas=0, totalSaidas=0, totalPendente=0;
+  const byArea = {};
+  Object.keys(AREAS).forEach(a => byArea[a] = {entrada:0, saida:0, pendente:0});
+
+  entries.forEach(e=>{
+    if(e.tipo === 'Entrada') totalEntradas += e.valor; else totalSaidas += e.valor;
+    if(e.status !== 'Pago') totalPendente += e.valor;
+    if(byArea[e.area]){
+      if(e.tipo==='Entrada') byArea[e.area].entrada += e.valor; else byArea[e.area].saida += e.valor;
+      if(e.status !== 'Pago') byArea[e.area].pendente += e.valor;
+    }
+  });
+
+  const saldo = totalEntradas - totalSaidas;
+  const balEl = document.getElementById('totalBalance');
+  balEl.textContent = fmt(saldo);
+  balEl.classList.toggle('neg', saldo < 0);
+  document.getElementById('totalEntradas').textContent = fmt(totalEntradas);
+  document.getElementById('totalSaidas').textContent = fmt(totalSaidas);
+  document.getElementById('totalPendente').textContent = fmt(totalPendente) + " pend.";
+
+  const areaCards = document.getElementById('areaCards');
+  areaCards.innerHTML = Object.entries(AREAS).map(([name, meta])=>{
+    const d = byArea[name];
+    const saldoArea = d.entrada - d.saida;
+    return `<div class="area-card ${meta.cls}">
+      <div class="area-name">${meta.icon} ${name}</div>
+      <div class="area-saldo ${saldoArea<0?'neg':''}">${fmt(saldoArea)}</div>
+      ${d.pendente > 0 ? `<div class="area-pend">${fmt(d.pendente)} pendente</div>` : ''}
+    </div>`;
+  }).join('');
+
+  renderAlerts();
+  renderEquip();
+  renderAgenda();
+
+  const list = document.getElementById('entriesList');
+  const sorted = [...entries].sort((a,b)=> b.data.localeCompare(a.data));
+  if(sorted.length === 0){
+    list.innerHTML = `<div class="empty">Nenhum lançamento ainda.<br>Toque em "Novo lançamento" para começar.</div>`;
+    return;
+  }
+  list.innerHTML = sorted.map(e=>{
+    const meta = AREAS[e.area] || {icon:"💼"};
+    const dataFmt = e.data.split('-').reverse().join('/');
+    return `<div class="entry">
+      <div class="entry-icon ${e.tipo==='Entrada'?'entrada':'saida'}">${e.tipo==='Entrada'?'↓':'↑'}</div>
+      <div class="entry-main">
+        <div class="entry-title">${e.cliente}</div>
+        <div class="entry-meta">
+          <span>${meta.icon} ${e.area}</span>
+          <span>· ${dataFmt}</span>
+          ${e.categoria ? `<span>· ${e.categoria}</span>` : ''}
+          ${e.orgaoPublico ? `<span>· 🏛️ ${e.numProcesso || 'Órgão público'}${e.previsaoPagamento ? ' · prev. ' + e.previsaoPagamento.split('-').reverse().join('/') : ''}</span>` : ''}
+          <span class="tag ${e.status.toLowerCase()}">${e.status}</span>
+        </div>
+      </div>
+      <div class="entry-value ${e.tipo==='Entrada'?'entrada':'saida'}">${e.tipo==='Entrada'?'+':'-'}${fmt(e.valor)}</div>
+      <button class="del-btn" onclick="deleteEntry('${e.id}')">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function renderAlerts(){
+  const wrap = document.getElementById('alertsWrap');
+  const now = new Date();
+  const pendentes = agendamentos.filter(ag=>{
+    if(ag.status !== 'Agendado') return false;
+    const when = new Date(`${ag.data}T${ag.hora}`);
+    return when <= now;
+  });
+
+  const hojeStr = now.toISOString().slice(0,10);
+  const pagamentosVencidos = entries.filter(e =>
+    e.orgaoPublico && e.status !== 'Pago' && e.previsaoPagamento && e.previsaoPagamento < hojeStr
+  );
+
+  let html = '';
+  html += pendentes.map(ag=>`
+    <div class="alert-banner">
+      <div class="ico">⏰</div>
+      <div class="txt"><b>${ag.cliente}</b>Já passou do horário (${ag.hora}). Fez o serviço? Quanto custou?</div>
+      <button onclick="openConfirmSheet('${ag.id}')">Registrar</button>
+    </div>
+  `).join('');
+  html += pagamentosVencidos.map(e=>{
+    const diasAtraso = Math.floor((now - new Date(e.previsaoPagamento)) / 86400000);
+    return `
+    <div class="alert-banner">
+      <div class="ico">🏛️</div>
+      <div class="txt"><b>${e.cliente}</b>Previsão de pagamento venceu há ${diasAtraso}d (${fmt(e.valor)})${e.numProcesso ? ' · ' + e.numProcesso : ''}</div>
+      <button onclick="marcarPago('${e.id}')">Já pagou</button>
+    </div>`;
+  }).join('');
+
+  wrap.innerHTML = html;
+}
+
+async function marcarPago(id){
+  const e = entries.find(x=>x.id===id);
+  if(!e) return;
+  e.status = 'Pago';
+  await persist();
+  render();
+  setStatusMsg("Marcado como pago!");
+}
+
+function renderAgenda(){
+  const list = document.getElementById('agendaList');
+  const now = new Date();
+  const futuros = agendamentos
+    .filter(ag => ag.status === 'Agendado' && new Date(`${ag.data}T${ag.hora}`) > now)
+    .sort((a,b)=> `${a.data}${a.hora}`.localeCompare(`${b.data}${b.hora}`));
+  const recentes = agendamentos
+    .filter(ag => ag.status !== 'Agendado')
+    .sort((a,b)=> `${b.data}${b.hora}`.localeCompare(`${a.data}${a.hora}`))
+    .slice(0,3);
+  const items = [...futuros, ...recentes];
+
+  if(items.length === 0){
+    list.innerHTML = `<div class="empty">Nenhum compromisso agendado.<br>Toque em "Agendar serviço" para marcar uma visita.</div>`;
+    return;
+  }
+  list.innerHTML = items.map(ag=>{
+    const meta = AREAS[ag.area] || {icon:"💼"};
+    const dataFmt = ag.data.split('-').reverse().join('/');
+    const statusCls = ag.status === 'Agendado' ? 'agendado' : (ag.status === 'Concluído' ? 'concluido' : 'atrasado');
+    const clickable = ag.status === 'Agendado' ? `onclick="openConfirmSheet('${ag.id}')"` : '';
+    return `<div class="agenda-item" ${clickable}>
+      <div class="agenda-time"><div class="h">${ag.hora}</div><div class="d">${dataFmt}</div></div>
+      <div class="agenda-main">
+        <div class="agenda-title">${ag.cliente}</div>
+        <div class="agenda-meta">${meta.icon} ${ag.area}${ag.descricao ? ' · ' + ag.descricao : ''}${ag.hectares ? ' · ' + ag.hectares + ' ha' : ''}</div>
+      </div>
+      <div class="agenda-status ${statusCls}">${ag.status}</div>
+    </div>`;
+  }).join('');
+}
+
+loadEntries();
+</script>
+</body>
+</html>
