@@ -105,6 +105,9 @@
   .agenda-status.agendado{background:rgba(59,130,246,0.15); color:var(--son);}
   .agenda-status.concluido{background:rgba(52,211,153,0.15); color:var(--pago);}
   .agenda-status.atrasado{background:rgba(248,113,113,0.15); color:var(--saida);}
+  .agenda-cal-actions{display:flex; gap:6px; margin-top:6px;}
+  .cal-btn{background:var(--panel-2); border:1px solid var(--line); color:var(--muted);
+    border-radius:8px; padding:4px 8px; font-size:10.5px; font-weight:700; cursor:pointer; white-space:nowrap;}
 
   .entry{
     background:var(--panel); border:1px solid var(--line); border-radius:14px;
@@ -918,6 +921,75 @@ async function deleteAgendamento(id){
   render();
 }
 
+function pad2(n){ return String(n).padStart(2,'0'); }
+
+function agendaDateTimeParts(ag){
+  const [y,m,d] = ag.data.split('-').map(Number);
+  const [hh,mm] = ag.hora.split(':').map(Number);
+  const start = new Date(y, m-1, d, hh, mm);
+  const end = new Date(start.getTime() + 60*60*1000);
+  const fmt = dt => `${dt.getFullYear()}${pad2(dt.getMonth()+1)}${pad2(dt.getDate())}T${pad2(dt.getHours())}${pad2(dt.getMinutes())}00`;
+  return { startStr: fmt(start), endStr: fmt(end) };
+}
+
+function agendaCalendarText(ag){
+  const meta = AREAS[ag.area] || {icon:"💼"};
+  const title = `${ag.cliente}${ag.descricao ? ' - ' + ag.descricao : ''}`;
+  const desc = `${meta.icon} ${ag.area}${ag.hectares ? ' - ' + ag.hectares + ' ha' : ''}`;
+  return { title, desc };
+}
+
+function icsEscape(s){
+  return String(s||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
+}
+
+function addToAppleCalendar(ag){
+  if(!ag) return;
+  const { startStr, endStr } = agendaDateTimeParts(ag);
+  const { title, desc } = agendaCalendarText(ag);
+  const ics = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Controle Financeiro//PT-BR',
+    'CALSCALE:GREGORIAN',
+    'BEGIN:VEVENT',
+    `UID:${ag.id}@controle-financeiro`,
+    `DTSTAMP:${startStr}`,
+    `DTSTART:${startStr}`,
+    `DTEND:${endStr}`,
+    `SUMMARY:${icsEscape(title)}`,
+    `DESCRIPTION:${icsEscape(desc)}`,
+    `LOCATION:${icsEscape(ag.cliente)}`,
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].join('\r\n');
+
+  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.target = '_blank';
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 5000);
+}
+
+function addToGoogleCalendar(ag){
+  if(!ag) return;
+  const { startStr, endStr } = agendaDateTimeParts(ag);
+  const { title, desc } = agendaCalendarText(ag);
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: title,
+    dates: `${startStr}/${endStr}`,
+    details: desc,
+    location: ag.cliente
+  });
+  window.open(`https://calendar.google.com/calendar/render?${params.toString()}`, '_blank');
+}
+
 function openEquipSheet(){
   document.getElementById('equipOverlay').classList.add('open');
   resetEquipForm();
@@ -1274,6 +1346,10 @@ function renderAgenda(){
       <div class="agenda-main">
         <div class="agenda-title">${ag.cliente}</div>
         <div class="agenda-meta">${meta.icon} ${ag.area}${ag.descricao ? ' · ' + ag.descricao : ''}${ag.hectares ? ' · ' + ag.hectares + ' ha' : ''}</div>
+        <div class="agenda-cal-actions">
+          <button class="cal-btn" onclick="event.stopPropagation(); addToAppleCalendar(agendamentos.find(x=>x.id==='${ag.id}'))">📅 iPhone</button>
+          <button class="cal-btn" onclick="event.stopPropagation(); addToGoogleCalendar(agendamentos.find(x=>x.id==='${ag.id}'))">🗓️ Google</button>
+        </div>
       </div>
       <div class="item-actions">
         <div class="agenda-status ${statusCls}">${ag.status}</div>
